@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.ImageIcon;
+
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -29,7 +31,6 @@ public class ImageUtil {
 	private static int Th1 = 20;
 	private static int Th2 = 20;
 	private static int Th3 = 15;
-	
 	
 	public static Image matToImage(Mat matrix) {
 		int bufferSize = matrix.channels() * matrix.cols() * matrix.rows();
@@ -99,25 +100,32 @@ public class ImageUtil {
 		return bimage;
 	}
 	
-	public static void CheckColor(Mat inImg) {
+	public static void CheckColor(Mat inImg,Mat temp) {
 		// inImg数据类型是CV_8UC4
 		Imgproc.cvtColor(inImg, inImg, Imgproc.COLOR_BGRA2BGR);
 		inImg.convertTo(inImg, CvType.CV_64FC3);
+		temp.convertTo(temp, CvType.CV_64FC3);
 		Mat out = new Mat(inImg.rows(), inImg.cols(), CvType.CV_8UC1);
 		double[] buff = new double[(int) inImg.total() * inImg.channels()]; // 获取原图中的RGB信息
 		double[] data = new double[(int) (out.channels() * out.total())]; // 写入输出图像的信息
+		double[] tempdata = new double[(int) (temp.channels() * temp.total())]; // temp mat data
 		inImg.get(0, 0, buff);// 获取整张图片的像素信息
+		temp.get(0, 0,tempdata);
+		int clocount = out.cols();
+		int imgCols = inImg.cols();
+		int imgRows = inImg.rows();
+		int imgChannel = inImg.channels();
         double B, G, R;
-		for (int i = 0; i < inImg.rows(); i++) {
-			for (int j = 0, k = 0; j < inImg.cols() * inImg.channels(); j += inImg.channels(), k++) {
-				B = buff[i * inImg.cols() * inImg.channels() + j];
-				G = buff[i * inImg.cols() * inImg.channels() + j + 1];
-				R = buff[i * inImg.cols() * inImg.channels() + j + 2];
-				if (isFire(R, G, B)) {
-					data[i * out.cols() + k] = 255;
+		for (int i = 0; i < imgRows; i++) {
+			for (int j = 0, k = 0; j < imgCols * imgChannel; j += imgChannel, k++) {
+				B = buff[i * imgCols * imgChannel + j];
+				G = buff[i * imgCols * imgChannel + j + 1];
+				R = buff[i * imgCols * imgChannel + j + 2];
+				if (isFire(R, G, B,tempdata,clocount,i,k)) {
+					data[i * clocount + k] = 255;
 					continue;
 				}
-				data[i * out.cols() + k] = 0;
+				data[i * clocount + k] = 0;
 				
 			}
 		}
@@ -126,6 +134,21 @@ public class ImageUtil {
 		Imgproc.dilate(out, out, kernel);// 高亮图像
 		inImg.convertTo(inImg, CvType.CV_8UC1);
 		drawfire(inImg, out);
+	}
+	
+	public static Mat preProcessing(Mat webcam_image,Mat backImg) {
+		//temp store new Img
+		Mat tempImg = new Mat();
+		tempImg = webcam_image.clone();
+		//Gaussian
+		Imgproc.GaussianBlur(tempImg, tempImg, new Size(3, 3), 0, 0);
+		Imgproc.cvtColor(tempImg, tempImg, 6);	//rgb2gary
+		Core.absdiff(tempImg, backImg, tempImg);	//background clip
+		Imgproc.threshold(tempImg, tempImg, 200, 255, 0);	//set threshold to Binary img
+		Imgproc.dilate(tempImg, tempImg, new Mat());	//膨脹
+		Imgproc.erode(tempImg, tempImg, new Mat());		//腐蝕
+		Core.addWeighted(backImg, 0.95, tempImg, 0.05,1, backImg); //update background
+		return tempImg;
 	}
 	
 	private static double min(double a, double b) {
@@ -152,14 +175,14 @@ public class ImageUtil {
 		}
 	}
 	
-	private static boolean isFire(double R,double G,double B) {
+	private static boolean isFire(double R,double G,double B,double[] tempdata,int colCount,int i,int k) {
 		int minValue = (int) min(min(B, G), R);
 		double S = (1 - 3.0 * minValue / (R + G + B));
 		double T1 = Math.abs(R - G);
 		double T2 = Math.abs(B - G);
 		double T3 = Math.abs(R - B);
-		return R >= redThre && R >= G && G >= B &&  S >= ((255 - R) * saturationTh / redThre) 
-				&& ((R >= Rth && G >= Gth) || (T1 >= Th1 && T2 >= Th2))&& T2 + T3 >Th3;
+		return R >= redThre && R >= G && G >= B && S >= ((255 - R) * saturationTh / redThre)
+				&& ((R >= Rth && G >= Gth) || (T1 >= Th1 && T2 >= Th2)) && T2 + T3 > Th3 && tempdata[i * colCount + k] == 255;
 	}
 
 }

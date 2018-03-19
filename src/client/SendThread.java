@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import javax.imageio.ImageIO;
+import ui.MainUI;
 import util.ImageUtil;
 
 public class SendThread extends Thread {
@@ -25,10 +26,18 @@ public class SendThread extends Thread {
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
+		System.out.println("Send Thread：开始连接到服务端");
+		Socket socket = null;
 		try {
-			System.out.println("Send Thread：开始连接到服务端");
-			Socket socket = new Socket(serverIP, port);
-			System.out.println("Send Thread：连接到服务端成功");
+			socket = new Socket(serverIP, port);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			System.err.println("Send Thread：服务端终止");
+			MainUI.clientIP = null;
+			return;
+		}
+		System.out.println("Send Thread：连接到服务端成功");
+		try {
 			OutputStream outputStream = socket.getOutputStream();
 			BufferedImage bImage = ImageUtil.toBufferedImage(image);
 			ByteArrayOutputStream tempStream = new ByteArrayOutputStream();
@@ -43,7 +52,6 @@ public class SendThread extends Thread {
 			System.out.println("Send Thread：图片已发送完成");
 			socket.close();
 			System.out.println("Send Thread：套接字关闭");
-			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
