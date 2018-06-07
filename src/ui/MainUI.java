@@ -5,8 +5,6 @@ import client.*;
 import util.ImageUtil;
 import javax.swing.JFrame;
 import java.awt.Image;
-
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -25,7 +23,7 @@ public class MainUI extends Thread{
 	private static final int listenerPort = 8888;
 	private static final int sendPort = 8889;
 	public static String clientIP;
-//	private static JLabel labeltemp ;
+	private static JLabel labeltemp ;
 
 	/**
 	 * Create the application.
@@ -62,7 +60,7 @@ public class MainUI extends Thread{
 		ipLabel.setBounds(5, 5, 20, 15);
 		frame.getContentPane().add(ipLabel);
 		
-		showIP = new JLabel("192.168.43.139");
+		showIP = new JLabel("192.168.43.99");
 		showIP.setFont(new Font("Î¢ÈíÑÅºÚ", Font.PLAIN, 16));
 		showIP.setForeground(Color.red);
 		showIP.setBounds(25, 5, 200, 15);
@@ -74,19 +72,19 @@ public class MainUI extends Thread{
 		frame.setVisible(true);
 		
 		
-//		JFrame frame2 = new JFrame("temp");
-//		frame2.setBounds(50, 50, w, h);
-//		frame2.getContentPane().setLayout(null);
-//		
-//		labeltemp = new JLabel();
-//		labeltemp.setBounds(0, 0, w, h);
-//		frame2.getContentPane().add(labeltemp);
-//		frame2.setVisible(true);
+		JFrame frame2 = new JFrame("temp");
+		frame2.setBounds(50, 50, w, h);
+		frame2.getContentPane().setLayout(null);
+		
+		labeltemp = new JLabel();
+		labeltemp.setBounds(0, 0, w, h);
+		frame2.getContentPane().add(labeltemp); 
+		frame2.setVisible(true);
 	}
 	
 	public static void videoSocket() {
 		VideoCapture cap = new VideoCapture(0);
-		if (!cap.isOpened()) {
+		if (!cap.isOpened()) { 
 			System.out.println("No Camera");
 			return;
 		} 
@@ -105,9 +103,9 @@ public class MainUI extends Thread{
 				cap.release();
 				break;
 			}
-//			Mat temp = ImageUtil.preProcessing(webcam_image, backImg);
-//			Image img2 = ImageUtil.matToImage(temp);
-//			labeltemp.setIcon(new ImageIcon(img2));
+			Mat temp = ImageUtil.preProcessing(webcam_image, backImg);
+			Image img2 = ImageUtil.matToImage(temp);
+			labeltemp.setIcon(new ImageIcon(img2));
 		
 			ImageUtil.CheckColor(webcam_image,ImageUtil.preProcessing(webcam_image, backImg));
 			img = ImageUtil.matToImage(webcam_image);

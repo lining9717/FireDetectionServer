@@ -111,7 +111,7 @@ public class ImageUtil {
 		double[] tempdata = new double[(int) (temp.channels() * temp.total())]; // temp mat data
 		inImg.get(0, 0, buff);// 获取整张图片的像素信息
 		temp.get(0, 0,tempdata);
-		int clocount = out.cols();
+		int colcount = out.cols();
 		int imgCols = inImg.cols();
 		int imgRows = inImg.rows();
 		int imgChannel = inImg.channels();
@@ -121,12 +121,11 @@ public class ImageUtil {
 				B = buff[i * imgCols * imgChannel + j];
 				G = buff[i * imgCols * imgChannel + j + 1];
 				R = buff[i * imgCols * imgChannel + j + 2];
-				if (isFire(R, G, B,tempdata,clocount,i,k)) {
-					data[i * clocount + k] = 255;
+				if (isFire(R, G, B,tempdata,colcount,i,k)) {
+					data[i * colcount + k] = 255;
 					continue;
 				}
-				data[i * clocount + k] = 0;
-				
+				data[i * colcount + k] = 0;
 			}
 		}
 		out.put(0, 0, data); // 写入输出图像
@@ -144,20 +143,28 @@ public class ImageUtil {
 		Imgproc.GaussianBlur(tempImg, tempImg, new Size(3, 3), 0, 0);
 		Imgproc.cvtColor(tempImg, tempImg, 6);	//rgb2gary
 		Core.absdiff(tempImg, backImg, tempImg);	//background clip
-		Imgproc.threshold(tempImg, tempImg, 200, 255, 0);	//set threshold to Binary img
+		Imgproc.threshold(tempImg, tempImg, 50, 255, 0);	//set threshold to Binary img
 		Imgproc.dilate(tempImg, tempImg, new Mat());	//膨脹
 		Imgproc.erode(tempImg, tempImg, new Mat());		//腐蝕
 		Core.addWeighted(backImg, 0.95, tempImg, 0.05,1, backImg); //update background
 		return tempImg;
 	}
 	
-	private static double min(double a, double b) {
-		if (a < b)
-			return a;
-		else
-			return b;
+	private static boolean isFire(double R,double G,double B,double[] tempdata,int colCount,int i,int k) {
+		int minValue = (int) min(min(B, G), R);
+		double S = (1 - 3.0 * minValue / (R + G + B));
+		double T1 = Math.abs(R - G);
+		double T2 = Math.abs(B - G);
+		double T3 = Math.abs(R - B);
+		return R >= redThre 
+			&& R >= G 
+			&& G >= B 
+			&& S >= ((255 - R) * saturationTh / redThre)
+			&& ((R >= Rth && G >= Gth) || (T1 >= Th1 && T2 >= Th2)) 
+			&& T2 + T3 > Th3 
+			&& tempdata[i * colCount + k] == 255;
 	}
-
+	
 	private static void drawfire(Mat inputImg, Mat foreImg) {
 		List<MatOfPoint> contours_set = new ArrayList<>(); // 保存轮廓提取后的点集及拓扑关系
 		Imgproc.findContours(foreImg, contours_set, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
@@ -175,14 +182,11 @@ public class ImageUtil {
 		}
 	}
 	
-	private static boolean isFire(double R,double G,double B,double[] tempdata,int colCount,int i,int k) {
-		int minValue = (int) min(min(B, G), R);
-		double S = (1 - 3.0 * minValue / (R + G + B));
-		double T1 = Math.abs(R - G);
-		double T2 = Math.abs(B - G);
-		double T3 = Math.abs(R - B);
-		return R >= redThre && R >= G && G >= B && S >= ((255 - R) * saturationTh / redThre)
-				&& ((R >= Rth && G >= Gth) || (T1 >= Th1 && T2 >= Th2)) && T2 + T3 > Th3 && tempdata[i * colCount + k] == 255;
+	private static double min(double a, double b) {
+		if (a < b)
+			return a;
+		else
+			return b;
 	}
 
 }
